@@ -23,15 +23,27 @@ import {
 } from "recharts";
 import StatCard from "../components/StatCard";
 import {
-  dashboardStats,
   recentAlerts,
   regressionData,
   regressionLine,
   monthlyTrend,
 } from "../data/mockData";
+import useAcademicStore from "../stores/academicStore";
 import { Link } from "react-router-dom";
 
 export default function Dashboard() {
+  const students = useAcademicStore((s) => s.students);
+
+  const totalStudents = students.length;
+  const atRisk = students.filter((s) => s.riskLevel === "danger").length;
+  const warning = students.filter((s) => s.riskLevel === "warning").length;
+  const averageAttendance =
+    students.length > 0
+      ? Math.round(
+          students.reduce((a, s) => a + s.attendance, 0) / students.length,
+        )
+      : 0;
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -39,27 +51,27 @@ export default function Dashboard() {
         <StatCard
           icon={Users}
           label="Total Estudiantes"
-          value={dashboardStats.totalStudents}
+          value={totalStudents}
           color="blue"
         />
         <StatCard
           icon={AlertTriangle}
           label="En Riesgo (Alerta Roja)"
-          value={dashboardStats.atRisk}
+          value={atRisk}
           color="red"
           subtitle="Predicción < 10 pts"
         />
         <StatCard
           icon={AlertCircle}
           label="Advertencia"
-          value={dashboardStats.warning}
+          value={warning}
           color="yellow"
           subtitle="Tendencia descendente"
         />
         <StatCard
           icon={Percent}
           label="Asistencia Promedio"
-          value={`${dashboardStats.averageAttendance}%`}
+          value={`${averageAttendance}%`}
           color="green"
         />
       </div>

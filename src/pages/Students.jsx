@@ -8,7 +8,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { students as initialStudents } from "../data/mockData";
+import useAcademicStore from "../stores/academicStore";
 import Modal from "../components/Modal";
 
 const riskBadge = {
@@ -31,7 +31,10 @@ const emptyForm = {
 };
 
 export default function Students() {
-  const [studentList, setStudentList] = useState(initialStudents);
+  const studentList = useAcademicStore((s) => s.students);
+  const addStudent = useAcademicStore((s) => s.addStudent);
+  const updateStudent = useAcademicStore((s) => s.updateStudent);
+  const deleteStudent = useAcademicStore((s) => s.deleteStudent);
   const [search, setSearch] = useState("");
   const [filterRisk, setFilterRisk] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,29 +76,15 @@ export default function Students() {
   const handleSave = (e) => {
     e.preventDefault();
     if (editingStudent) {
-      setStudentList((prev) =>
-        prev.map((s) => (s.id === editingStudent.id ? { ...s, ...form } : s)),
-      );
+      updateStudent(editingStudent.id, form);
     } else {
-      const newId = Math.max(...studentList.map((s) => s.id), 0) + 1;
-      setStudentList((prev) => [
-        ...prev,
-        {
-          ...form,
-          id: newId,
-          subjects: [],
-          attendance: Number(form.attendance),
-          average: Number(form.average),
-          predictedFinal: Number(form.predictedFinal),
-          studyHours: Number(form.studyHours),
-        },
-      ]);
+      addStudent(form);
     }
     setModalOpen(false);
   };
 
   const handleDelete = (id) => {
-    setStudentList((prev) => prev.filter((s) => s.id !== id));
+    deleteStudent(id);
     setDeleteConfirm(null);
   };
 
