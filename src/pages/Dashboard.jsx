@@ -1,10 +1,5 @@
-import {
-  Users,
-  AlertTriangle,
-  AlertCircle,
-  TrendingUp,
-  Percent,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Users, AlertTriangle, AlertCircle, Percent } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -22,27 +17,33 @@ import {
   ReferenceLine,
 } from "recharts";
 import StatCard from "../components/StatCard";
-import {
-  recentAlerts,
-  regressionData,
-  regressionLine,
-  monthlyTrend,
-} from "../data/mockData";
-import useAcademicStore from "../stores/academicStore";
+import { monthlyTrend } from "../data/mockData";
 import { Link } from "react-router-dom";
+import api from "../services/api";
 
 export default function Dashboard() {
-  const students = useAcademicStore((s) => s.students);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const totalStudents = students.length;
-  const atRisk = students.filter((s) => s.riskLevel === "danger").length;
-  const warning = students.filter((s) => s.riskLevel === "warning").length;
-  const averageAttendance =
-    students.length > 0
-      ? Math.round(
-          students.reduce((a, s) => a + s.attendance, 0) / students.length,
-        )
-      : 0;
+  useEffect(() => {
+    api
+      .get("/dashboard")
+      .then((res) => {
+        setData(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
+        Cargando dashboard...
+      </div>
+    );
+  }
+
+  const { stats, regressionData, regressionLine, recentAlerts } = data;
 
   return (
     <div className="space-y-6">
@@ -51,27 +52,27 @@ export default function Dashboard() {
         <StatCard
           icon={Users}
           label="Total Estudiantes"
-          value={totalStudents}
+          value={stats.totalStudents}
           color="blue"
         />
         <StatCard
           icon={AlertTriangle}
           label="En Riesgo (Alerta Roja)"
-          value={atRisk}
+          value={stats.atRisk}
           color="red"
           subtitle="Predicción < 10 pts"
         />
         <StatCard
           icon={AlertCircle}
           label="Advertencia"
-          value={warning}
+          value={stats.warning}
           color="yellow"
           subtitle="Tendencia descendente"
         />
         <StatCard
           icon={Percent}
           label="Asistencia Promedio"
-          value={`${averageAttendance}%`}
+          value={`${stats.averageAttendance}%`}
           color="green"
         />
       </div>

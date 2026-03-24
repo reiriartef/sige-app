@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Users, Plus, Pencil, Trash2 } from "lucide-react";
 import useAcademicStore from "../stores/academicStore";
@@ -9,9 +9,16 @@ const emptyForm = { name: "", code: "", year: "1er Año", section: "A" };
 export default function Subjects() {
   const subjects = useAcademicStore((s) => s.subjects);
   const students = useAcademicStore((s) => s.students);
+  const fetchSubjects = useAcademicStore((s) => s.fetchSubjects);
+  const fetchStudents = useAcademicStore((s) => s.fetchStudents);
   const addSubject = useAcademicStore((s) => s.addSubject);
   const updateSubject = useAcademicStore((s) => s.updateSubject);
   const deleteSubject = useAcademicStore((s) => s.deleteSubject);
+
+  useEffect(() => {
+    fetchSubjects();
+    fetchStudents();
+  }, [fetchSubjects, fetchStudents]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -72,19 +79,23 @@ export default function Subjects() {
     setDeleteConfirm(subj);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editing) {
-      updateSubject(editing.id, form);
-    } else {
-      addSubject(form);
+    try {
+      if (editing) {
+        await updateSubject(editing.id, form);
+      } else {
+        await addSubject(form);
+      }
+      setModalOpen(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Error al guardar.");
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteConfirm) return;
-    deleteSubject(deleteConfirm.id);
+    await deleteSubject(deleteConfirm.id);
     setDeleteConfirm(null);
   };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   BookOpen,
@@ -36,12 +36,16 @@ export default function SubjectDetail() {
   const { id } = useParams();
   const subjects = useAcademicStore((s) => s.subjects);
   const students = useAcademicStore((s) => s.students);
-  const updateGrade = useAcademicStore((s) => s.updateGrade);
-  const updateSubjectAttendance = useAcademicStore(
-    (s) => s.updateSubjectAttendance,
-  );
+  const fetchSubjects = useAcademicStore((s) => s.fetchSubjects);
+  const fetchStudents = useAcademicStore((s) => s.fetchStudents);
+  const updateGrades = useAcademicStore((s) => s.updateGrades);
   const enrollStudent = useAcademicStore((s) => s.enrollStudent);
   const unenrollStudent = useAcademicStore((s) => s.unenrollStudent);
+
+  useEffect(() => {
+    fetchSubjects();
+    fetchStudents();
+  }, [fetchSubjects, fetchStudents]);
 
   const subject = subjects.find((s) => s.id === Number(id));
 
@@ -135,20 +139,22 @@ export default function SubjectDetail() {
     });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editModal) return;
     const { studentId, subjectId, grade1, grade2, grade3, attendance } =
       editModal;
-    updateGrade(studentId, subjectId, "grade1", grade1);
-    updateGrade(studentId, subjectId, "grade2", grade2);
-    updateGrade(studentId, subjectId, "grade3", grade3);
-    updateSubjectAttendance(studentId, subjectId, attendance);
+    await updateGrades(studentId, subjectId, {
+      grade1: grade1 === "" ? null : Number(grade1),
+      grade2: grade2 === "" ? null : Number(grade2),
+      grade3: grade3 === "" ? null : Number(grade3),
+      attendance: Number(attendance),
+    });
     setEditModal(null);
   };
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
     if (!selectedStudentId) return;
-    enrollStudent(Number(selectedStudentId), subject.id);
+    await enrollStudent(Number(selectedStudentId), subject.id);
     setSelectedStudentId("");
     setEnrollModal(false);
   };

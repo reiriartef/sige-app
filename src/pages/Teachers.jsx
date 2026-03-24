@@ -1,22 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GraduationCap, Plus, Pencil, Trash2, Mail, Phone } from "lucide-react";
-import { teachers as initialTeachers, subjects } from "../data/mockData";
+import useAcademicStore from "../stores/academicStore";
+import api from "../services/api";
 import Modal from "../components/Modal";
 
 const emptyForm = {
   name: "",
   email: "",
   phone: "",
-  subjectIds: [],
   status: "activo",
 };
 
 export default function Teachers() {
-  const [teacherList, setTeacherList] = useState(initialTeachers);
+  const [teacherList, setTeacherList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const subjects = useAcademicStore((s) => s.subjects);
+  const fetchSubjects = useAcademicStore((s) => s.fetchSubjects);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await api.get("/teachers");
+        setTeacherList(data);
+      } catch {
+        // ignore
+      }
+    };
+    load();
+    fetchSubjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const reloadTeachers = async () => {
+    const { data } = await api.get("/teachers");
+    setTeacherList(data);
+  };
 
   const openCreate = () => {
     setEditingTeacher(null);
@@ -29,38 +51,31 @@ export default function Teachers() {
     setForm({
       name: teacher.name,
       email: teacher.email,
-      phone: teacher.phone,
-      subjectIds: [...teacher.subjectIds],
+      phone: teacher.phone || "",
       status: teacher.status,
     });
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editingTeacher) {
-      setTeacherList((prev) =>
-        prev.map((t) => (t.id === editingTeacher.id ? { ...t, ...form } : t))
-      );
-    } else {
-      const newId = Math.max(...teacherList.map((t) => t.id), 0) + 1;
-      setTeacherList((prev) => [...prev, { ...form, id: newId }]);
+    try {
+      if (editingTeacher) {
+        await api.put(`/teachers/${editingTeacher.id}`, form);
+      } else {
+        await api.post("/teachers", form);
+      }
+      setModalOpen(false);
+      reloadTeachers();
+    } catch (err) {
+      alert(err.response?.data?.message || "Error al guardar.");
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id) => {
-    setTeacherList((prev) => prev.filter((t) => t.id !== id));
+  const handleDelete = async (id) => {
+    await api.delete(`/teachers/${id}`);
     setDeleteConfirm(null);
-  };
-
-  const toggleSubject = (subjectId) => {
-    setForm((prev) => ({
-      ...prev,
-      subjectIds: prev.subjectIds.includes(subjectId)
-        ? prev.subjectIds.filter((id) => id !== subjectId)
-        : [...prev.subjectIds, subjectId],
-    }));
+    reloadTeachers();
   };
 
   const inputCls =
@@ -86,7 +101,7 @@ export default function Teachers() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teacherList.map((teacher) => {
           const teacherSubjects = subjects.filter((s) =>
-            teacher.subjectIds.includes(s.id)
+            (teacher.subjectIds || []).includes(s.id),
           );
           return (
             <div
@@ -149,7 +164,9 @@ export default function Teachers() {
 
               {teacherSubjects.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-[11px] text-slate-400 mb-1.5">Materias asignadas</p>
+                  <p className="text-[11px] text-slate-400 mb-1.5">
+                    Materias asignadas
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {teacherSubjects.map((s) => (
                       <span
@@ -233,28 +250,6 @@ export default function Teachers() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-2">
-              Materias asignadas
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {subjects.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => toggleSubject(s.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                    form.subjectIds.includes(s.id)
-                      ? "bg-primary-600 text-white border-primary-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-primary-300"
-                  }`}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
@@ -280,7 +275,8 @@ export default function Teachers() {
         title="Confirmar eliminación"
       >
         <p className="text-sm text-slate-600 mb-6">
-          ¿Estás seguro de que deseas eliminar este profesor? Esta acción no se puede deshacer.
+          ¿Estás seguro de que deseas eliminar este profesor? Esta acción no se
+          puede deshacer.
         </p>
         <div className="flex justify-end gap-3">
           <button

@@ -1,40 +1,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import api from "../services/api";
 
 const useAuthStore = create(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
 
-      login: (email) => {
-        // Mock: accept any credentials, assign role based on email
-        const isStudent = email.includes("alumno") || email.includes("estudiante");
-        const mockUser = isStudent
-          ? {
-              id: 99,
-              name: "Luis Martínez",
-              email,
-              role: "alumno",
-            }
-          : {
-              id: 1,
-              name: "Prof. María González",
-              email,
-              role: "profesor",
-            };
-
-        set({ user: mockUser, isAuthenticated: true });
+      login: async (email, password) => {
+        const { data } = await api.post("/login", { email, password });
+        set({ user: data.user, token: data.token, isAuthenticated: true });
+        return data;
       },
 
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+          await api.post("/logout");
+        } catch {
+          // ignore — token may already be invalid
+        }
+        set({ user: null, token: null, isAuthenticated: false });
       },
     }),
     {
       name: "sige-auth",
-    }
-  )
+    },
+  ),
 );
 
 export default useAuthStore;

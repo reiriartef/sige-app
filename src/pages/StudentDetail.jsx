@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -45,12 +45,17 @@ export default function StudentDetail() {
   const { id } = useParams();
   const students = useAcademicStore((s) => s.students);
   const subjects = useAcademicStore((s) => s.subjects);
-  const updateGrade = useAcademicStore((s) => s.updateGrade);
-  const updateSubjectAttendance = useAcademicStore(
-    (s) => s.updateSubjectAttendance,
-  );
+  const fetchStudents = useAcademicStore((s) => s.fetchStudents);
+  const fetchSubjects = useAcademicStore((s) => s.fetchSubjects);
+  const updateGrades = useAcademicStore((s) => s.updateGrades);
   const enrollStudent = useAcademicStore((s) => s.enrollStudent);
   const unenrollStudent = useAcademicStore((s) => s.unenrollStudent);
+
+  useEffect(() => {
+    fetchStudents();
+    fetchSubjects();
+  }, [fetchStudents, fetchSubjects]);
+
   const student = students.find((s) => s.id === Number(id));
 
   const [editModal, setEditModal] = useState(null);
@@ -382,14 +387,16 @@ export default function StudentDetail() {
       >
         {editModal && (
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const { subjectId, grade1, grade2, grade3, attendance } =
                 editModal;
-              updateGrade(student.id, subjectId, "grade1", grade1);
-              updateGrade(student.id, subjectId, "grade2", grade2);
-              updateGrade(student.id, subjectId, "grade3", grade3);
-              updateSubjectAttendance(student.id, subjectId, attendance);
+              await updateGrades(student.id, subjectId, {
+                grade1: grade1 === "" ? null : Number(grade1),
+                grade2: grade2 === "" ? null : Number(grade2),
+                grade3: grade3 === "" ? null : Number(grade3),
+                attendance: Number(attendance),
+              });
               setEditModal(null);
             }}
             className="space-y-4"
@@ -496,9 +503,9 @@ export default function StudentDetail() {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!selectedSubjectId) return;
-                    enrollStudent(student.id, Number(selectedSubjectId));
+                    await enrollStudent(student.id, Number(selectedSubjectId));
                     setSelectedSubjectId("");
                     setEnrollModal(false);
                   }}

@@ -9,6 +9,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Forgot password flow
   const [view, setView] = useState("login"); // "login" | "forgot" | "forgot-sent"
@@ -18,10 +20,22 @@ export default function Login() {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(email);
-    navigate("/");
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.errors?.email?.[0] ||
+        "Error al iniciar sesión. Verifica tus credenciales.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleForgotSubmit = (e) => {
@@ -57,6 +71,11 @@ export default function Login() {
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 rounded-lg bg-danger-50 border border-danger-200 text-danger-700 text-sm">
+                    {error}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Correo electrónico
@@ -116,14 +135,15 @@ export default function Login() {
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                  disabled={submitting}
+                  className="w-full py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Ingresar
+                  {submitting ? "Ingresando..." : "Ingresar"}
                 </button>
               </form>
 
               <p className="text-center text-xs text-slate-400 mt-6">
-                Demo: cualquier credencial funciona
+                Demo: admin@sige.edu / password
               </p>
             </>
           )}

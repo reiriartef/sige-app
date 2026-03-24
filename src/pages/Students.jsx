@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Search,
@@ -32,6 +32,7 @@ const emptyForm = {
 
 export default function Students() {
   const studentList = useAcademicStore((s) => s.students);
+  const fetchStudents = useAcademicStore((s) => s.fetchStudents);
   const addStudent = useAcademicStore((s) => s.addStudent);
   const updateStudent = useAcademicStore((s) => s.updateStudent);
   const deleteStudent = useAcademicStore((s) => s.deleteStudent);
@@ -41,6 +42,10 @@ export default function Students() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const filtered = studentList.filter((s) => {
     const matchesSearch =
@@ -73,18 +78,22 @@ export default function Students() {
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editingStudent) {
-      updateStudent(editingStudent.id, form);
-    } else {
-      addStudent(form);
+    try {
+      if (editingStudent) {
+        await updateStudent(editingStudent.id, form);
+      } else {
+        await addStudent(form);
+      }
+      setModalOpen(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Error al guardar.");
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id) => {
-    deleteStudent(id);
+  const handleDelete = async (id) => {
+    await deleteStudent(id);
     setDeleteConfirm(null);
   };
 
